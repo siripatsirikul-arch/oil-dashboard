@@ -95,6 +95,23 @@ def main():
 
     new_history = sorted(new_history, key=lambda x: x["date"])[-365:]
 
+    # Forward-fill Thai prices: วันที่ไม่มีข้อมูล ให้ใช้ค่าล่าสุด
+    last_thai = {}
+    for entry in new_history:
+        if entry["thai"]:
+            last_thai = entry["thai"]
+        elif last_thai:
+            entry["thai"] = last_thai
+
+    # Backward-fill: ช่วงก่อนจุดข้อมูลแรก ใช้ค่าแรกที่มี
+    first_thai = next((h["thai"] for h in new_history if h["thai"]), {})
+    for entry in new_history:
+        if not entry["thai"] and first_thai:
+            entry["thai"] = first_thai
+
+    filled = sum(1 for h in new_history if h["thai"])
+    print(f"    Thai prices filled: {filled}/{len(new_history)} วัน")
+
     latest = existing.get("latest", new_history[-1] if new_history else {})
 
     output = {
