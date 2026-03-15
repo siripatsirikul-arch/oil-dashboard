@@ -11,9 +11,7 @@
   :root {
     --bg: #0d0f14; --surface: #13161d; --surface2: #1a1e28;
     --border: rgba(255,255,255,0.07); --text: #e8eaf0; --muted: #6b7280;
-    --brent: #ef5350; --wti: #42a5f5; --dubai: #78909c;
-    --diesel: #26a69a; --gsh95: #5c6bc0; --gsh91: #ab47bc; --benzin: #ffa726;
-    --danger: #ef5350; --warn: #ffa726; --safe: #26a69a;
+    --danger: #ef5350; --warn: #ffa726; --safe: #26a69a; --wti: #42a5f5;
   }
   body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 14px; min-height: 100vh; padding: 24px 20px 60px; }
 
@@ -40,11 +38,18 @@
   .metric-sub { font-size: 11px; color: var(--muted); }
   .c-red { color: var(--danger); } .c-green { color: var(--safe); } .c-warn { color: var(--warn); } .c-blue { color: var(--wti); }
 
-  /* Tabs */
-  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--surface); border: 1px solid var(--border); padding: 4px; border-radius: 8px; width: fit-content; }
+  /* Controls row: tabs + period picker */
+  .controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); padding: 4px; border-radius: 8px; }
   .tab { padding: 7px 16px; border-radius: 5px; font-size: 13px; font-family: 'IBM Plex Sans Thai', sans-serif; cursor: pointer; border: none; background: transparent; color: var(--muted); transition: all 0.15s; }
   .tab.active { background: var(--surface2); color: #fff; border: 1px solid var(--border); }
   .tab:hover:not(.active) { color: var(--text); }
+
+  /* Period picker */
+  .period-picker { display: flex; gap: 4px; }
+  .period-btn { padding: 6px 12px; border-radius: 5px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--muted); transition: all 0.15s; }
+  .period-btn.active { background: var(--surface2); color: #fff; border-color: rgba(255,255,255,0.15); }
+  .period-btn:hover:not(.active) { color: var(--text); }
 
   /* Panels */
   .panel { display: none; } .panel.active { display: block; }
@@ -58,25 +63,9 @@
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
   .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 
-  /* Alert */
-  .alert { border-radius: 8px; padding: 12px 16px; font-size: 12.5px; line-height: 1.5; margin-top: 12px; }
-  .alert-danger { background: rgba(239,83,80,0.1); border: 1px solid rgba(239,83,80,0.3); color: #ff8a80; }
-  .alert-warn { background: rgba(255,167,38,0.1); border: 1px solid rgba(255,167,38,0.3); color: #ffcc80; }
-  .alert strong { font-weight: 600; }
-
-  /* Subsidy summary */
-  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
-  .sum-card { border-radius: 8px; padding: 12px; text-align: center; }
-  .sum-label { font-size: 11px; margin-bottom: 6px; }
-  .sum-val { font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 500; line-height: 1; margin-bottom: 3px; }
-  .sum-note { font-size: 10px; }
-  .s-g { background: rgba(38,166,154,0.12); border: 1px solid rgba(38,166,154,0.25); color: var(--safe); }
-  .s-w { background: rgba(255,167,38,0.1); border: 1px solid rgba(255,167,38,0.25); color: var(--warn); }
-  .s-d { background: rgba(239,83,80,0.1); border: 1px solid rgba(239,83,80,0.25); color: var(--danger); }
-
   @media (max-width: 500px) {
-    .summary-grid { grid-template-columns: 1fr; }
     .metrics { grid-template-columns: repeat(2, 1fr); }
+    .controls { flex-direction: column; align-items: flex-start; }
   }
 </style>
 </head>
@@ -93,27 +82,33 @@
   <div class="subtitle">ราคาน้ำมันดิบโลก vs ราคาหน้าปั๊มไทย · อัพเดทอัตโนมัติทุก 6 ชั่วโมง</div>
 </div>
 
-<!-- Loading state -->
 <div class="state-box" id="loading">
   <div class="spinner"></div>
   <div>กำลังโหลดข้อมูลราคาน้ำมัน...</div>
 </div>
 
-<!-- Main content (hidden until data loads) -->
 <div id="app" style="display:none;">
   <div class="metrics" id="metrics"></div>
 
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('global',this)">น้ำมันดิบโลก</button>
-    <button class="tab" onclick="switchTab('thai',this)">ราคาปั๊มไทย</button>
-    <button class="tab" onclick="switchTab('subsidy',this)">เงินอุดหนุน</button>
+  <div class="controls">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('global',this)">น้ำมันดิบโลก</button>
+      <button class="tab" onclick="switchTab('thai',this)">ราคาปั๊มไทย</button>
+    </div>
+    <div class="period-picker" id="period-picker">
+      <button class="period-btn" onclick="setPeriod(7,this)">7วัน</button>
+      <button class="period-btn" onclick="setPeriod(30,this)">30วัน</button>
+      <button class="period-btn active" onclick="setPeriod(90,this)">90วัน</button>
+      <button class="period-btn" onclick="setPeriod(180,this)">180วัน</button>
+      <button class="period-btn" onclick="setPeriod(0,this)">ทั้งหมด</button>
+    </div>
   </div>
 
   <!-- Tab 1: Global -->
   <div class="panel active" id="panel-global">
     <div class="chart-card">
       <div class="chart-title">ราคาน้ำมันดิบโลก (USD/บาร์เรล)</div>
-      <div class="chart-desc" id="global-desc">ข้อมูลย้อนหลัง 90 วัน</div>
+      <div class="chart-desc" id="global-desc">—</div>
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:#ef5350;"></div>Brent Crude</div>
         <div class="legend-item"><div class="legend-dot" style="background:#42a5f5;"></div>WTI</div>
@@ -127,38 +122,25 @@
   <div class="panel" id="panel-thai">
     <div class="chart-card">
       <div class="chart-title">ราคาน้ำมันหน้าปั๊มไทย (บาท/ลิตร)</div>
-      <div class="chart-desc">เส้นประแดง = ต้นทุนจริงโรงกลั่น · เส้นเขียว = ราคาขาย (ตรึง)</div>
+      <div class="chart-desc" id="thai-desc">—</div>
       <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(239,83,80,0.6);"></div>ต้นทุนดีเซล (โรงกลั่น)</div>
         <div class="legend-item"><div class="legend-dot" style="background:#26a69a;"></div>ดีเซล B7</div>
         <div class="legend-item"><div class="legend-dot" style="background:#5c6bc0;"></div>แก๊สโซฮอล์ 95</div>
         <div class="legend-item"><div class="legend-dot" style="background:#ab47bc;"></div>แก๊สโซฮอล์ 91</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#66bb6a;"></div>E20</div>
         <div class="legend-item"><div class="legend-dot" style="background:#ffa726;"></div>เบนซิน 95</div>
       </div>
       <div class="chart-wrap"><canvas id="thaiChart" height="300"></canvas></div>
-      <div class="alert alert-danger" id="gap-alert"></div>
-    </div>
-  </div>
-
-  <!-- Tab 3: Subsidy -->
-  <div class="panel" id="panel-subsidy">
-    <div class="chart-card">
-      <div class="chart-title">เงินอุดหนุนดีเซลจากกองทุนน้ำมันฯ (บาท/ลิตร)</div>
-      <div class="chart-desc">คำนวณจาก ต้นทุนโรงกลั่น − ราคาขายปลีก</div>
-      <div class="chart-wrap"><canvas id="subsidyChart" height="220"></canvas></div>
-      <div class="summary-grid" id="subsidy-summary"></div>
-      <div class="alert alert-warn" id="subsidy-alert"></div>
     </div>
   </div>
 </div>
 
 <script>
-// ── CSS variables → hex (Chart.js ไม่รองรับ CSS vars) ─────────────────────
 const C = {
-  grid:   'rgba(255,255,255,0.05)',
-  tick:   '#6b7280',
-  tt_bg:  '#1a1e28',
-  tt_bd:  'rgba(255,255,255,0.1)',
+  grid:  'rgba(255,255,255,0.05)',
+  tick:  '#6b7280',
+  tt_bg: '#1a1e28',
+  tt_bd: 'rgba(255,255,255,0.1)',
 };
 
 Chart.defaults.color = C.tick;
@@ -166,156 +148,125 @@ Chart.defaults.font.family = "'IBM Plex Sans Thai', sans-serif";
 Chart.defaults.font.size = 11;
 
 let charts = {};
+let allData = null;
+let currentPeriod = 90;
 
-// ── Load data/prices.json ──────────────────────────────────────────────────
 async function loadData() {
-  const res  = await fetch('data/prices.json?t=' + Date.now());
+  const res = await fetch('data/prices.json?t=' + Date.now());
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
 
-// ── Compute diesel cost estimate from Brent price ──────────────────────────
-// rough formula: refinery cost ≈ (Dubai_USD × THB/USD × 0.159) + refinery margin
-// THB/USD ≈ 35, 0.159 = barrel→liter conversion, margin ≈ 6 THB
-function estimateDieselCost(dubaiUsd) {
-  if (!dubaiUsd) return null;
-  const thbPerUsd = 35;
-  const literPerBarrel = 158.987;
-  const refineryMargin = 6;
-  return Math.round(((dubaiUsd * thbPerUsd) / literPerBarrel + refineryMargin) * 100) / 100;
+// ── Filter history by period (days), 0 = all ──────────────────────────────
+function filterHistory(history, days) {
+  if (!days || days === 0) return history;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  return history.filter(h => h.date >= cutoffStr);
 }
 
-// ── Render ─────────────────────────────────────────────────────────────────
-function render(data) {
-  const latest  = data.latest;
-  const history = data.history;
-  const meta    = data.meta;
-
-  // — Update timestamp —
-  const d = new Date(latest.updated_at);
-  document.getElementById('updated-at').textContent =
-    'อัพเดท ' + d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
-
-  // — Prepare series arrays —
-  const labels   = history.map(h => {
-    const d = new Date(h.date);
+// ── Format date label ─────────────────────────────────────────────────────
+function fmtDate(dateStr, totalPoints) {
+  const d = new Date(dateStr);
+  if (totalPoints <= 60) {
     return (d.getMonth()+1) + '/' + String(d.getDate()).padStart(2,'0');
-  });
+  }
+  // ถ้าข้อมูลเยอะ แสดงเดือน/ปี
+  return (d.getMonth()+1) + '/' + String(d.getFullYear()).slice(2);
+}
 
-  const brentArr  = history.map(h => h.global?.brent  ?? null);
-  const wtiArr    = history.map(h => h.global?.wti    ?? null);
-  const dubaiArr  = history.map(h => h.global?.dubai  ?? null);
+// ── Render charts with given history slice ────────────────────────────────
+function renderCharts(history) {
+  const n = history.length;
+  const labels   = history.map(h => fmtDate(h.date, n));
+  const brentArr = history.map(h => h.global?.brent   ?? null);
+  const wtiArr   = history.map(h => h.global?.wti     ?? null);
+  const dubaiArr = history.map(h => h.global?.dubai   ?? null);
   const dieselArr = history.map(h => h.thai?.diesel_b7 ?? null);
   const gsh95Arr  = history.map(h => h.thai?.gsh95    ?? null);
   const gsh91Arr  = history.map(h => h.thai?.gsh91    ?? null);
+  const e20Arr    = history.map(h => h.thai?.e20       ?? null);
   const benzinArr = history.map(h => h.thai?.benzin95  ?? null);
-  const costArr   = history.map(h => estimateDieselCost(h.global?.dubai));
-  const subsidyArr = costArr.map((c, i) => {
-    const d = dieselArr[i];
-    return (c && d) ? Math.max(0, Math.round((c - d) * 100) / 100) : null;
-  });
 
-  const latestBrent   = latest.global?.brent  ?? '-';
-  const latestWTI     = latest.global?.wti    ?? '-';
-  const latestDiesel  = latest.thai?.diesel_b7 ?? '-';
-  const latestGSH95   = latest.thai?.gsh95    ?? '-';
-  const latestCost    = estimateDieselCost(latest.global?.dubai);
-  const latestSubsidy = latestCost && latestDiesel !== '-'
-    ? Math.max(0, Math.round((latestCost - latestDiesel) * 100) / 100) : null;
-
-  // — Metric cards —
-  document.getElementById('metrics').innerHTML = `
-    <div class="metric"><div class="metric-label">Brent Crude</div>
-      <div class="metric-value c-red">$${latestBrent}</div>
-      <div class="metric-sub">USD/บาร์เรล</div></div>
-    <div class="metric"><div class="metric-label">WTI</div>
-      <div class="metric-value c-blue">$${latestWTI}</div>
-      <div class="metric-sub">USD/บาร์เรล</div></div>
-    <div class="metric"><div class="metric-label">ดีเซล B7 (ไทย)</div>
-      <div class="metric-value c-green">฿${latestDiesel}</div>
-      <div class="metric-sub">บาท/ลิตร</div></div>
-    <div class="metric"><div class="metric-label">ต้นทุนดีเซล (ประมาณ)</div>
-      <div class="metric-value c-warn">฿${latestCost ?? '-'}</div>
-      <div class="metric-sub">บาท/ลิตร (โรงกลั่น)</div></div>
-    <div class="metric"><div class="metric-label">อุดหนุนดีเซล (ประมาณ)</div>
-      <div class="metric-value c-red">฿${latestSubsidy ?? '-'}</div>
-      <div class="metric-sub">บาท/ลิตร</div></div>
-    <div class="metric"><div class="metric-label">แก๊สโซฮอล์ 95</div>
-      <div class="metric-value" style="color:#5c6bc0;">฿${latestGSH95}</div>
-      <div class="metric-sub">บาท/ลิตร</div></div>
-  `;
-
-  // — Alert texts —
-  if (latestCost && latestDiesel !== '-') {
-    document.getElementById('gap-alert').innerHTML =
-      `ช่องว่างต้นทุน <strong>฿${latestCost}</strong> vs ราคาขาย <strong>฿${latestDiesel}</strong> = กองทุนฯ แบก <strong>฿${latestSubsidy}/ลิตร</strong> แทนผู้บริโภค`;
-  }
-  const dailyBurden = latestSubsidy ? Math.round(latestSubsidy * 85 * 1e6 / 1e8) / 10 : '-';
-  document.getElementById('subsidy-alert').innerHTML =
-    `ภาระกองทุนฯ ประมาณ <strong>${dailyBurden} พันล้านบาท/วัน</strong> · ข้อมูลจากการประมาณการ`;
-
-  const maxSub = Math.max(...subsidyArr.filter(Boolean));
-  const minSub = Math.min(...subsidyArr.filter(v => v !== null));
-  document.getElementById('subsidy-summary').innerHTML = `
-    <div class="sum-card s-g"><div class="sum-label">ต่ำสุด</div>
-      <div class="sum-val">฿${minSub.toFixed(2)}</div><div class="sum-note">บาท/ลิตร</div></div>
-    <div class="sum-card s-w"><div class="sum-label">ล่าสุด</div>
-      <div class="sum-val">฿${latestSubsidy ?? '-'}</div><div class="sum-note">บาท/ลิตร</div></div>
-    <div class="sum-card s-d"><div class="sum-label">สูงสุด</div>
-      <div class="sum-val">฿${maxSub.toFixed(2)}</div><div class="sum-note">บาท/ลิตร</div></div>
-  `;
+  const first = history[0]?.date ?? '';
+  const last  = history[n-1]?.date ?? '';
+  const rangeLabel = n > 0 ? `${first} → ${last} (${n} จุดข้อมูล)` : '—';
+  document.getElementById('global-desc').textContent = rangeLabel;
+  document.getElementById('thai-desc').textContent   = rangeLabel;
 
   const ttOpts = {
     backgroundColor: C.tt_bg, borderColor: C.tt_bd, borderWidth: 1,
     titleColor: '#e8eaf0', bodyColor: '#9ca3af'
   };
+  const xOpts = { grid: { display: false }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 14 }};
 
-  // ── Chart 1: Global ──────────────────────────────────────────────────────
+  // Chart 1: Global
   if (charts.global) charts.global.destroy();
   charts.global = new Chart(document.getElementById('globalChart'), {
     type: 'line',
     data: { labels, datasets: [
-      { label: 'Brent', data: brentArr, borderColor: '#ef5350', backgroundColor: 'rgba(239,83,80,0.08)', fill: true,  tension: 0.35, pointRadius: 2, borderWidth: 2.5 },
-      { label: 'WTI',   data: wtiArr,   borderColor: '#42a5f5', backgroundColor: 'rgba(66,165,245,0.05)', fill: true,  tension: 0.35, pointRadius: 2, borderWidth: 2 },
-      { label: 'Dubai', data: dubaiArr,  borderColor: '#78909c', backgroundColor: 'transparent',           fill: false, tension: 0.35, pointRadius: 1.5, borderWidth: 1.5, borderDash: [5,4] },
+      { label: 'Brent', data: brentArr, borderColor: '#ef5350', backgroundColor: 'rgba(239,83,80,0.08)', fill: true,  tension: 0.35, pointRadius: n > 60 ? 0 : 2, borderWidth: 2.5 },
+      { label: 'WTI',   data: wtiArr,   borderColor: '#42a5f5', backgroundColor: 'rgba(66,165,245,0.05)', fill: true,  tension: 0.35, pointRadius: n > 60 ? 0 : 2, borderWidth: 2 },
+      { label: 'Dubai', data: dubaiArr,  borderColor: '#78909c', backgroundColor: 'transparent',           fill: false, tension: 0.35, pointRadius: 0, borderWidth: 1.5, borderDash: [5,4] },
     ]},
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { ...ttOpts, callbacks: { label: ctx => ` ${ctx.dataset.label}: $${ctx.parsed.y?.toFixed(2) ?? '-'}` }}},
-      scales: { y: { grid: { color: C.grid }, ticks: { callback: v => '$'+v }}, x: { grid: { display: false }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 12 }}}
+      scales: { y: { grid: { color: C.grid }, ticks: { callback: v => '$'+v }}, x: xOpts }
     }
   });
 
-  // ── Chart 2: Thai prices ─────────────────────────────────────────────────
+  // Chart 2: Thai
   if (charts.thai) charts.thai.destroy();
   charts.thai = new Chart(document.getElementById('thaiChart'), {
     type: 'line',
     data: { labels, datasets: [
-      { label: 'ต้นทุนดีเซล', data: costArr,   borderColor: 'rgba(239,83,80,0.65)', backgroundColor: 'rgba(239,83,80,0.06)', fill: true,  tension: 0.35, pointRadius: 2, borderWidth: 1.5, borderDash: [5,4] },
-      { label: 'ดีเซล B7',   data: dieselArr, borderColor: '#26a69a', backgroundColor: 'rgba(38,166,154,0.08)', fill: true,  tension: 0,    pointRadius: 2, borderWidth: 3 },
-      { label: 'GSH 95',     data: gsh95Arr,  borderColor: '#5c6bc0', backgroundColor: 'transparent',           fill: false, tension: 0.3,  pointRadius: 2, borderWidth: 2 },
-      { label: 'GSH 91',     data: gsh91Arr,  borderColor: '#ab47bc', backgroundColor: 'transparent',           fill: false, tension: 0.3,  pointRadius: 2, borderWidth: 2 },
-      { label: 'เบนซิน 95',  data: benzinArr, borderColor: '#ffa726', backgroundColor: 'transparent',           fill: false, tension: 0.3,  pointRadius: 2, borderWidth: 2 },
+      { label: 'ดีเซล B7',   data: dieselArr, borderColor: '#26a69a', backgroundColor: 'rgba(38,166,154,0.08)', fill: true,  tension: 0, pointRadius: n > 60 ? 0 : 2, borderWidth: 3 },
+      { label: 'GSH 95',     data: gsh95Arr,  borderColor: '#5c6bc0', backgroundColor: 'transparent',           fill: false, tension: 0.3, pointRadius: n > 60 ? 0 : 2, borderWidth: 2 },
+      { label: 'GSH 91',     data: gsh91Arr,  borderColor: '#ab47bc', backgroundColor: 'transparent',           fill: false, tension: 0.3, pointRadius: n > 60 ? 0 : 2, borderWidth: 2 },
+      { label: 'E20',        data: e20Arr,    borderColor: '#66bb6a', backgroundColor: 'transparent',           fill: false, tension: 0.3, pointRadius: n > 60 ? 0 : 2, borderWidth: 1.5, borderDash: [4,3] },
+      { label: 'เบนซิน 95',  data: benzinArr, borderColor: '#ffa726', backgroundColor: 'transparent',           fill: false, tension: 0.3, pointRadius: n > 60 ? 0 : 2, borderWidth: 2 },
     ]},
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { ...ttOpts, callbacks: { label: ctx => ` ${ctx.dataset.label}: ฿${ctx.parsed.y?.toFixed(2) ?? '-'}` }}},
-      scales: { y: { min: 15, max: 60, grid: { color: C.grid }, ticks: { callback: v => '฿'+v }}, x: { grid: { display: false }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 12 }}}
-    }
-  });
-
-  // ── Chart 3: Subsidy ─────────────────────────────────────────────────────
-  const subColors = subsidyArr.map(v => !v ? '#26a69a' : v > 10 ? '#ef5350' : v > 3 ? '#ffa726' : '#26a69a');
-  if (charts.subsidy) charts.subsidy.destroy();
-  charts.subsidy = new Chart(document.getElementById('subsidyChart'), {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'อุดหนุน', data: subsidyArr, backgroundColor: subColors, borderRadius: 3, borderWidth: 0 }]},
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { ...ttOpts, callbacks: { label: ctx => ` อุดหนุน: ฿${ctx.parsed.y?.toFixed(2) ?? '-'}/ลิตร` }}},
-      scales: { y: { min: 0, grid: { color: C.grid }, ticks: { callback: v => '฿'+v }}, x: { grid: { display: false }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 12 }}}
+      scales: { y: { min: 15, max: 60, grid: { color: C.grid }, ticks: { callback: v => '฿'+v }}, x: xOpts }
     }
   });
 }
 
-// ── Tab switch ─────────────────────────────────────────────────────────────
+// ── Render metric cards (always from latest) ──────────────────────────────
+function renderMetrics(latest) {
+  const b  = latest.global?.brent    ?? '-';
+  const w  = latest.global?.wti      ?? '-';
+  const d  = latest.thai?.diesel_b7  ?? '-';
+  const g95 = latest.thai?.gsh95     ?? '-';
+  const g91 = latest.thai?.gsh91     ?? '-';
+  const e20 = latest.thai?.e20       ?? '-';
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Brent Crude</div>
+      <div class="metric-value c-red">$${b}</div><div class="metric-sub">USD/บาร์เรล</div></div>
+    <div class="metric"><div class="metric-label">WTI</div>
+      <div class="metric-value c-blue">$${w}</div><div class="metric-sub">USD/บาร์เรล</div></div>
+    <div class="metric"><div class="metric-label">ดีเซล B7</div>
+      <div class="metric-value c-green">฿${d}</div><div class="metric-sub">บาท/ลิตร</div></div>
+    <div class="metric"><div class="metric-label">แก๊สโซฮอล์ 95</div>
+      <div class="metric-value" style="color:#5c6bc0;">฿${g95}</div><div class="metric-sub">บาท/ลิตร</div></div>
+    <div class="metric"><div class="metric-label">แก๊สโซฮอล์ 91</div>
+      <div class="metric-value" style="color:#ab47bc;">฿${g91}</div><div class="metric-sub">บาท/ลิตร</div></div>
+    <div class="metric"><div class="metric-label">E20</div>
+      <div class="metric-value" style="color:#66bb6a;">฿${e20}</div><div class="metric-sub">บาท/ลิตร</div></div>
+  `;
+}
+
+// ── Period switch ─────────────────────────────────────────────────────────
+function setPeriod(days, btn) {
+  currentPeriod = days;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (allData) renderCharts(filterHistory(allData.history, days));
+}
+
+// ── Tab switch ────────────────────────────────────────────────────────────
 function switchTab(id, btn) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -323,13 +274,17 @@ function switchTab(id, btn) {
   btn.classList.add('active');
 }
 
-// ── Boot ───────────────────────────────────────────────────────────────────
+// ── Boot ──────────────────────────────────────────────────────────────────
 (async () => {
   try {
-    const data = await loadData();
+    allData = await loadData();
+    const ts = new Date(allData.latest.updated_at);
+    document.getElementById('updated-at').textContent =
+      'อัพเดท ' + ts.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'short', timeStyle: 'short' });
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    render(data);
+    renderMetrics(allData.latest);
+    renderCharts(filterHistory(allData.history, currentPeriod));
   } catch (e) {
     document.getElementById('loading').innerHTML =
       `<div style="color:#ef5350;">⚠ โหลดข้อมูลไม่ได้: ${e.message}</div>

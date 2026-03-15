@@ -236,8 +236,8 @@ def main():
     history = [h for h in history if h["date"] != today]
     history.append(snapshot)
 
-    # เก็บแค่ 90 วันล่าสุด
-    history = sorted(history, key=lambda x: x["date"])[-90:]
+    # เก็บแค่ 365 วันล่าสุด
+    history = sorted(history, key=lambda x: x["date"])[-365:]
 
     output = {
         "latest": snapshot,
