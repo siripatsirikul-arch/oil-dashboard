@@ -192,7 +192,7 @@ def fetch_thai_prices() -> dict:
 
 # ─── โหลดและ append ข้อมูลเก่า ──────────────────────────────────────────────
 
-DATA_FILE = Path(__file__).parent.parent / "data" / "prices.json"
+DATA_FILE = Path(__file__).parent.parent / "docs" / "data" / "prices.json"
 
 def load_existing() -> dict:
     if DATA_FILE.exists():

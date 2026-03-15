@@ -169,7 +169,7 @@ let charts = {};
 
 // ── Load data/prices.json ──────────────────────────────────────────────────
 async function loadData() {
-  const res  = await fetch('../data/prices.json?t=' + Date.now());
+  const res  = await fetch('data/prices.json?t=' + Date.now());
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
