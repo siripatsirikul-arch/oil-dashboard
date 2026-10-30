@@ -1,11 +1,11 @@
 {
   "latest": {
     "date": "2026-10-30",
-    "updated_at": "2026-10-30T05:13:05Z",
+    "updated_at": "2026-10-30T12:30:52Z",
     "global": {
-      "brent": 112.0,
-      "wti": 102.98,
-      "dubai": 111.0
+      "brent": 113.26,
+      "wti": 104.02,
+      "dubai": 112.26
     },
     "thai": {
       "diesel_b7": 29.94,
@@ -6207,11 +6207,11 @@
     },
     {
       "date": "2026-10-30",
-      "updated_at": "2026-10-30T05:13:05Z",
+      "updated_at": "2026-10-30T12:30:52Z",
       "global": {
-        "brent": 112.0,
-        "wti": 102.98,
-        "dubai": 111.0
+        "brent": 113.26,
+        "wti": 104.02,
+        "dubai": 112.26
       },
       "thai": {
         "diesel_b7": 29.94,
@@ -6226,6 +6226,6 @@
   "meta": {
     "total_days": 365,
     "first_date": "2025-09-04",
-    "last_updated": "2026-10-30T05:13:05Z"
+    "last_updated": "2026-10-30T12:30:52Z"
   }
 }
